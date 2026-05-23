@@ -1,10 +1,11 @@
 import pygame
 import sys
 
+from scene import Scene
+from scene_event import SceneEvent
+from hotbox import Hotbox
+from textbox import TextBox
 
-# ------------------------------------------------------------
-# Settings
-# ------------------------------------------------------------
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -12,80 +13,65 @@ FPS = 60
 
 BACKGROUND_PATH = "assets/scenes/warehouse.png"
 
-class Hotspot:
-    def __init__(self, x, y, width, height, label):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.label = label
-        self.is_hovered = False
-
-    def update(self, mouse_pos):
-        self.is_hovered = self.rect.collidepoint(mouse_pos)
-
-    def draw(self, surface, font):
-        if self.is_hovered:
-            # halbtransparente Fläche
-            overlay = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-            overlay.fill((255, 255, 0, 80))
-            surface.blit(overlay, self.rect.topleft)
-
-            # Rahmen
-            pygame.draw.rect(surface, (255, 220, 0), self.rect, 2)
-
-            # Label
-            text_surface = font.render(self.label, True, (255, 255, 255))
-            text_bg = pygame.Surface(
-                (text_surface.get_width() + 12, text_surface.get_height() + 8),
-                pygame.SRCALPHA
-            )
-            text_bg.fill((0, 0, 0, 180))
-
-            label_x = self.rect.x
-            label_y = self.rect.y - text_bg.get_height() - 6
-
-            if label_y < 0:
-                label_y = self.rect.y + self.rect.height + 6
-
-            surface.blit(text_bg, (label_x, label_y))
-            surface.blit(text_surface, (label_x + 6, label_y + 4))
-
-
-# ------------------------------------------------------------
-# Game
-# ------------------------------------------------------------
 
 class Game:
     def __init__(self):
         pygame.init()
 
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        pygame.display.set_caption("AICapone POC")
+        pygame.display.set_caption("AI Capone POC")
 
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("arial", 22)
 
-        self.background = self.load_background(BACKGROUND_PATH)
-
-        self.hotspots = [
-            Hotspot(
-                x=500,
-                y=280,
-                width=220,
-                height=140,
-                label="Alter Terminal"
-            )
-        ]
+        self.scene = self._create_start_scene()
 
         self.running = True
 
-    def load_background(self, path):
-        try:
-            image = pygame.image.load(path).convert()
-            image = pygame.transform.scale(image, (WINDOW_WIDTH, WINDOW_HEIGHT))
-            return image
-        except pygame.error as e:
-            print(f"Could not load background image: {path}")
-            print(e)
-            return None
+    def _create_start_scene(self):
+        scene = Scene(
+            background_path=BACKGROUND_PATH,
+            window_width=WINDOW_WIDTH,
+            window_height=WINDOW_HEIGHT
+        )
+
+        terminal_event = SceneEvent(
+            hotbox=Hotbox(
+                x=170,
+                y=380,
+                width=950,
+                height=280,
+                label="conference table"
+            )
+        )
+
+        terminal_event.add_textbox(
+            TextBox(
+                x=40,
+                y=540,
+                width=1200,
+                height=140,
+                text=(
+                    "a old heavy wooden conference table stands in the middle of the room. Some bottles of booze are still on the table, but they are all empty. Together with some glasses and cigarettes, they are covered in a thick layer of dust."
+                )
+            )
+        )
+
+        terminal_event.add_textbox(
+            TextBox(
+                x=40,
+                y=540,
+                width=1200,
+                height=140,
+                text=(
+                    "A man approaches you."
+                )
+            )
+        )
+
+        scene.add_scene_event(terminal_event)
+
+        return scene
 
     def run(self):
         while self.running:
@@ -104,24 +90,21 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
 
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
 
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.scene.handle_left_click(event.pos)
+
     def update(self):
         mouse_pos = pygame.mouse.get_pos()
-
-        for hotspot in self.hotspots:
-            hotspot.update(mouse_pos)
+        self.scene.update(mouse_pos)
 
     def draw(self):
-        if self.background:
-            self.screen.blit(self.background, (0, 0))
-        else:
-            self.screen.fill((30, 30, 30))
+        self.scene.draw(self.screen, self.font)
 
-        for hotspot in self.hotspots:
-            hotspot.draw(self.screen, self.font)
 
 if __name__ == "__main__":
     game = Game()
